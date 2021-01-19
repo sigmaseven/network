@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.16)
 project(network)
 
 set(CMAKE_CXX_STANDARD 20)
+option(NETWORK_BUILD_TESTS "" ON)
+option(NETWORK_BUILD_EXAMPLES "" ON)
 
 # Download and unpack googletest at configure time
 configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
@@ -36,16 +38,23 @@ if(WIN32)
     add_definitions(-DWINDOWS)
 endif(WIN32)
 
-set(COMPILE_FLAGS "-msse3 -maes")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMPILE_FLAGS}")
+if(LINUX)
+    set(COMPILE_FLAGS "-msse3 -maes")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${COMPILE_FLAGS}")
+endif()
 
-add_executable(network-test ${TESTS})
-add_executable(http-test examples/http_example.cpp)
-add_executable(https-test examples/https_example.cpp)
+if(NETWORK_BUILD_TESTS)
+    add_executable(network-test ${TESTS})
+    enable_testing()
+    add_test(NAME network_test COMMAND network_test)
+    target_link_libraries(network-test gtest_main ssl crypto)
+endif()
 
-target_link_libraries(network-test gtest_main ssl crypto)
-target_link_libraries(http-test gtest_main ssl crypto)
-target_link_libraries(https-test gtest_main ssl crypto)
+if(NETWORK_BUILD_EXAMPLES)
+    add_executable(http-test examples/http_example.cpp)
+    add_executable(https-test examples/https_example.cpp)
+    target_link_libraries(http-test gtest_main ssl crypto)
+    target_link_libraries(https-test gtest_main ssl crypto)
+endif()
 
-enable_testing()
-add_test(NAME network_test COMMAND network_test)
+
