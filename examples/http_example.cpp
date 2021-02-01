@@ -12,13 +12,17 @@ int main() {
     network::payload buffer;
     std::string body;
 
+    network::init();
+
     if(auto e = client.connect("www.google.com", "80")) {
         e->display();
+        network::shutdown();
         return 1;
     }
 
     if(auto e = client.send(request)) {
         e->display();
+        network::shutdown();
         return 1;
     }
 
@@ -27,6 +31,7 @@ int main() {
 
         if(e) {
             e->display();
+            network::shutdown();
             return 1;
         }
 
@@ -36,12 +41,14 @@ int main() {
 
         if(auto e = response.write(buffer)) {
             e->display();
+            network::shutdown();
             return 1;
         }
     }
 
     if(auto e = response.read(body, response.contents().size())) {
         e->display();
+        network::shutdown();
         return 1;
     }
 

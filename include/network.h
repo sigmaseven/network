@@ -27,11 +27,14 @@ extern "C" {
 #include <openssl/err.h>
 #include <openssl/ssl.h>
 #endif // LINUX
+#ifdef WINDOWS
+#include <winsock2.h>
+#include <ws2tcpip.h>
+#endif
 }
 
 namespace network {
     class payload;
-    class ssl_context;
 
     enum endian {
         BIG,
@@ -68,14 +71,18 @@ namespace network {
         return std::endian::native == std::endian::big ? BIG : LITTLE;
     }
 
-    [[maybe_unused]] inline void init_tls() {
-        SSL_load_error_strings();
-        SSL_library_init();
-        OpenSSL_add_all_algorithms();
-        ERR_load_BIO_strings();
-        ERR_load_crypto_strings();
+    inline void init() {
+#ifdef WINDOWS
+        WSAData output;
+        WSAStartup(MAKEWORD(2,2), &output);
+#endif
     }
 
+    inline void shutdown() {
+#ifdef WINDOWS
+        WSACleanup();
+#endif
+    }
     class error {
         std::string msg;
 
@@ -94,41 +101,6 @@ namespace network {
         virtual std::optional<network::error> deserialize(payload& p) = 0;
         virtual std::optional<network::error> serialize(payload& p) = 0;
         virtual std::size_t size() = 0;
-    };
-
-    class ssl_context {
-        SSL_CTX *ctx;
-
-    public:
-        ssl_context() : ctx(nullptr) {
-            ctx = SSL_CTX_new(TLS_method());
-        }
-
-        explicit ssl_context(const ssl_context_type t) : ctx(nullptr) {
-            if(t == SSL_CLIENT) {
-                ctx = SSL_CTX_new(TLS_client_method());
-            } else {
-                ctx = SSL_CTX_new(TLS_server_method());
-            }
-        }
-
-        ~ssl_context() {
-            if(ctx) {
-                SSL_CTX_free(ctx);
-            }
-        }
-
-        ssl_context(ssl_context& other) {
-            ctx = other.ctx;
-            other.ctx = nullptr;
-        }
-
-        ssl_context(ssl_context&& other) noexcept {
-            ctx = other.ctx;
-            other.ctx = nullptr;
-        }
-
-        const SSL_CTX *context() { return ctx; }
     };
 
     class address_record {
@@ -680,7 +652,15 @@ namespace network {
 
     public:
         generic_socket(int family, int socket_type) : d(-1), i(family, socket_type) {}
-        ~generic_socket() { if(d >= 0) { ::close(d); } }
+        ~generic_socket() {
+            if(d >= 0) {
+#ifdef WINDOWS
+                ::closesocket(d);
+#else
+                ::close(d);
+#endif
+            }
+        }
 
         virtual std::optional<network::error> send(payload& p) = 0;
         virtual std::pair<int,std::optional<network::error>> receive(payload& p, const std::size_t& size) = 0;
@@ -729,7 +709,7 @@ namespace network {
         explicit tcp_socket(int family) : generic_socket(family, SOCK_STREAM) {}
 
         std::optional<network::error> send(payload& p) override {
-            if(int e = ::send(descriptor(), p.contents().data(), p.contents().size(), 0); e < 0) {
+            if(int e = ::send(descriptor(), (char *)p.contents().data(), p.contents().size(), 0); e < 0) {
                 return network::error(strerror(errno));
             }
             return std::nullopt;
@@ -739,7 +719,7 @@ namespace network {
             int count = 0;
             p.contents().resize(size);
 
-            if(count = ::recv(descriptor(), p.contents().data(), size, 0); count < 0) {
+            if(count = ::recv(descriptor(), (char *)p.contents().data(), size, 0); count < 0) {
                 return {count, network::error(strerror(errno)) };
             }
 
@@ -753,7 +733,7 @@ namespace network {
         explicit udp_socket(int family) : generic_socket(family, SOCK_DGRAM) {}
 
         std::optional<network::error> send(payload& p) override {
-            if(int e = ::send(descriptor(), p.contents().data(), p.contents().size(), 0); e < 0) {
+            if(int e = ::send(descriptor(), (char *)p.contents().data(), p.contents().size(), 0); e < 0) {
                 return network::error(strerror(errno));
             }
             return std::nullopt;
@@ -766,7 +746,7 @@ namespace network {
                 return e;
             }
 
-            if(int e = ::sendto(descriptor(), p.contents().data(), p.contents().size(), 0,
+            if(int e = ::sendto(descriptor(), (char *)p.contents().data(), p.contents().size(), 0,
                                 i.results()->ai_addr, i.results()->ai_addrlen); e < 0) {
                 return network::error(strerror(errno));
             }
@@ -778,7 +758,7 @@ namespace network {
             int count = 0;
             p.contents().resize(size);
 
-            if(count = ::recv(descriptor(), p.contents().data(), size, 0); count < 0) {
+            if(count = ::recv(descriptor(), (char *)p.contents().data(), size, 0); count < 0) {
                 return {count, network::error(strerror(errno))};
             }
 
