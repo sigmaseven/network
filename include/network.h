@@ -696,7 +696,13 @@ namespace network {
             return std::nullopt;
         }
 
-        [[nodiscard]] std::optional<network::error> bind(const address_record& record) const {
+        [[nodiscard]] std::optional<network::error> bind(const address_record& record) {
+            if(auto s = socket(record.info()->ai_family, record.info()->ai_socktype, record.info()->ai_protocol); s < 0) {
+                return network::make_error(errno);
+            } else {
+                set_descriptor(s);
+            }
+            
             if(const auto e = ::bind(d, record.info()->ai_addr, record.info()->ai_addrlen); e < 0) {
                 return network::make_error(errno);
             }
