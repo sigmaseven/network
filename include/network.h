@@ -29,10 +29,12 @@ extern "C" {
 #endif // LINUX
 #ifdef WINDOWS
 #include <winsock2.h>
+#include <mstcpip.h>
 #include <ws2tcpip.h>
 #endif
-}
 
+#include "bearssl.h"
+}
 namespace network {
     class payload;
 
@@ -42,29 +44,29 @@ namespace network {
     };
 
     enum address {
-        IPV4 = AF_INET,
-        IPV6 = AF_INET6,
+        IPV4 [[maybe_unused]] = AF_INET,
+        IPV6 [[maybe_unused]] = AF_INET6,
     };
 
     enum protocol {
-        ICMP   = IPPROTO_ICMP,
-        ICMPV6 = IPPROTO_ICMPV6,
-        IGMP   = IPPROTO_IGMP,
-        TCP    = IPPROTO_TCP,
-        UDP    = IPPROTO_UDP,
+        ICMP   [[maybe_unused]] = IPPROTO_ICMP,
+        ICMPV6 [[maybe_unused]] = IPPROTO_ICMPV6,
+        IGMP   [[maybe_unused]] = IPPROTO_IGMP,
+        TCP    [[maybe_unused]] = IPPROTO_TCP,
+        UDP    [[maybe_unused]] = IPPROTO_UDP,
     };
 
     enum ssl_context_type {
-        SSL_CLIENT,
-        SSL_SERVER,
+        SSL_CLIENT [[maybe_unused]],
+        SSL_SERVER [[maybe_unused]],
     };
 
     enum ssl_version {
-        SSLV2,
-        SSLV3,
-        TLS1_1,
-        TLS1_2,
-        TLS1_3,
+        SSLV2  [[maybe_unused]],
+        SSLV3  [[maybe_unused]],
+        TLS1_1 [[maybe_unused]],
+        TLS1_2 [[maybe_unused]],
+        TLS1_3 [[maybe_unused]],
     };
 
     constexpr endian platform_endianness() {
@@ -73,7 +75,7 @@ namespace network {
 
     inline void init() {
 #ifdef WINDOWS
-        WSAData output;
+        WSAData output{};
         WSAStartup(MAKEWORD(2,2), &output);
 #endif
     }
@@ -83,6 +85,7 @@ namespace network {
         WSACleanup();
 #endif
     }
+
     class error {
         std::string msg;
 
@@ -95,6 +98,18 @@ namespace network {
 
         std::string& message() { return msg; }
     };
+
+    [[maybe_unused]] inline error make_error(const int& e) {
+#ifdef WINDOWS
+        std::string buffer;
+        buffer.resize(1024);
+        strerror_s(buffer.data(), buffer.size(), e);
+        return error(buffer);
+#endif
+#ifdef LINUX
+        return network::error(strerror(errno));
+#endif
+    }
 
     class serializable {
     public:
@@ -154,7 +169,7 @@ namespace network {
             return address_record(this->i->ai_next);
         }
 
-        std::optional<int> protocol() {
+        [[maybe_unused]] std::optional<int> protocol() {
             if(!this->i) {
                 return std::nullopt;
             }
@@ -162,7 +177,7 @@ namespace network {
             return this->i->ai_protocol;
         }
 
-        std::optional<int> socket_type() {
+        [[maybe_unused]] std::optional<int> socket_type() {
             if(!this->i) {
                 return std::nullopt;
             }
@@ -186,7 +201,7 @@ namespace network {
             hint.ai_flags = AI_PASSIVE;
         }
 
-        explicit address_info(struct addrinfo *address) :
+        [[maybe_unused]] explicit address_info(struct addrinfo *address) :
                 hint(),
                 result(address) {
             memset(&hint, 0, sizeof(hint));
@@ -196,7 +211,7 @@ namespace network {
             hint.ai_flags = AI_PASSIVE;
         }
 
-        explicit address_info(const int family) :
+        [[maybe_unused]] explicit address_info(const int family) :
                 hint(),
                 result(nullptr) {
             memset(&hint, 0, sizeof(hint));
@@ -216,7 +231,7 @@ namespace network {
             hint.ai_flags = AI_PASSIVE;
         }
 
-        address_info(const int family, const int socktype, const int protocol, const int flags) :
+        [[maybe_unused]] address_info(const int family, const int socktype, const int protocol, const int flags) :
                 hint(),
                 result(nullptr) {
             memset(&hint, 0, sizeof(hint));
@@ -293,11 +308,6 @@ namespace network {
         position(0) {
         }
 
-        explicit payload(endian e) :
-        data(std::vector<std::uint8_t>()),
-        position(0) {
-        }
-
         explicit payload(const std::size_t &size) :
         data(std::vector<std::uint8_t>(size)),
         position(0) {
@@ -306,6 +316,7 @@ namespace network {
         explicit payload(const std::string& input) {
             for(const auto& c : input) {
                 data.push_back(c);
+                position = 0;
             }
         }
 
@@ -317,7 +328,7 @@ namespace network {
         }
 
         std::vector<std::uint8_t>& contents(){ return data; }
-        std::size_t index() { return position; }
+        [[nodiscard]] std::size_t index() const { return position; }
         std::size_t remaining() { return (data.size() - position) + 1;}
         void reset() { contents().clear(); position = 0; }
 
@@ -644,13 +655,10 @@ namespace network {
     };
 
     class generic_socket {
-    private:
+    public:
         int d;
         address_info i;
 
-        std::optional<network::error> read_buffer() { return std::nullopt; }
-
-    public:
         generic_socket(int family, int socket_type) : d(-1), i(family, socket_type) {}
         ~generic_socket() {
             if(d >= 0) {
@@ -669,72 +677,82 @@ namespace network {
         void set_descriptor(const int& n) { d = n; }
         int& descriptor() { return d; }
 
-        std::optional<network::error> connect(const std::string& hostname, const std::string& port) {
+        virtual std::optional<network::error> connect(const std::string& hostname, const std::string& port) {
             if(auto e = i.resolve(hostname, port)) {
                 return e;
             }
 
             auto record = i.results();
             if(auto s = socket(record->ai_family, record->ai_socktype, record->ai_protocol); s < 0) {
-                return network::error(strerror(errno));
+                return network::make_error(errno);
             } else {
                 set_descriptor(s);
             }
 
             if(auto e = ::connect(descriptor(), record->ai_addr, record->ai_addrlen); e < 0) {
-                return network::error(strerror(errno));
+                return network::make_error(errno);
             }
 
             return std::nullopt;
         }
 
-        std::optional<network::error> bind() {
+        [[maybe_unused]] std::optional<network::error> bind() {
             if(auto e = ::bind(d, i.results()->ai_addr, i.results()->ai_addrlen); e < 0) {
-                return network::error(strerror(errno));
+                return network::make_error(errno);
             }
             return std::nullopt;
         }
 
-        std::optional<network::error> listen(const int& backlog)  {
+        [[nodiscard]] std::optional<network::error> bind(const address_record& record) const {
+            if(const auto e = ::bind(d, record.info()->ai_addr, record.info()->ai_addrlen); e < 0) {
+                return network::make_error(errno);
+            }
+            
+            return std::nullopt;
+        }
+
+        [[maybe_unused]] [[nodiscard]] std::optional<network::error> listen(const int& backlog) const  {
             if(auto e = ::listen(d, backlog); e < 0) {
-                return network::error(strerror(errno));
+                return network::make_error(errno);
             }
             return std::nullopt;
         }
     };
 
-    class tcp_socket : public generic_socket {
+    class [[maybe_unused]] tcp_socket : public generic_socket {
     public:
         tcp_socket() : generic_socket(AF_UNSPEC, SOCK_STREAM) {}
-        explicit tcp_socket(int family) : generic_socket(family, SOCK_STREAM) {}
+
+        [[maybe_unused]] explicit tcp_socket(int family) : generic_socket(family, SOCK_STREAM) {}
 
         std::optional<network::error> send(payload& p) override {
             if(int e = ::send(descriptor(), (char *)p.contents().data(), p.contents().size(), 0); e < 0) {
-                return network::error(strerror(errno));
+                return network::make_error(errno);
             }
             return std::nullopt;
         }
 
         std::pair<int,std::optional<network::error>> receive(payload& p, const std::size_t& size) override {
-            int count = 0;
+            int count;
             p.contents().resize(size);
 
             if(count = ::recv(descriptor(), (char *)p.contents().data(), size, 0); count < 0) {
-                return {count, network::error(strerror(errno)) };
+                return {count, network::make_error(errno)};
             }
 
             return {count, std::nullopt};
         }
     };
 
-    class udp_socket : public generic_socket {
+    class [[maybe_unused]] udp_socket : public generic_socket {
     public:
         udp_socket() : generic_socket(AF_UNSPEC, SOCK_DGRAM) {}
-        explicit udp_socket(int family) : generic_socket(family, SOCK_DGRAM) {}
+
+        [[maybe_unused]] explicit udp_socket(int family) : generic_socket(family, SOCK_DGRAM) {}
 
         std::optional<network::error> send(payload& p) override {
             if(int e = ::send(descriptor(), (char *)p.contents().data(), p.contents().size(), 0); e < 0) {
-                return network::error(strerror(errno));
+                return network::make_error(errno);
             }
             return std::nullopt;
         }
@@ -748,27 +766,27 @@ namespace network {
 
             if(int e = ::sendto(descriptor(), (char *)p.contents().data(), p.contents().size(), 0,
                                 i.results()->ai_addr, i.results()->ai_addrlen); e < 0) {
-                return network::error(strerror(errno));
+                return network::make_error(errno);
             }
 
             return std::nullopt;
         }
 
         std::pair<int,std::optional<network::error>> receive(payload& p, const std::size_t &size) override {
-            int count = 0;
+            int count;
             p.contents().resize(size);
 
             if(count = ::recv(descriptor(), (char *)p.contents().data(), size, 0); count < 0) {
-                return {count, network::error(strerror(errno))};
+                return {count, network::make_error(errno)};
             }
 
             return {count, std::nullopt};
         }
     };
 
-    class raw_socket : public generic_socket {
+    class [[maybe_unused]] raw_socket : public generic_socket {
     public:
-        explicit raw_socket(int family) : generic_socket(family, SOCK_RAW) {}
+        [[maybe_unused]] explicit raw_socket(const int& family) : generic_socket(family, SOCK_RAW) {}
     };
 }
 

@@ -1,0 +1,14 @@
+cmake_minimum_required(VERSION 3.16)
+project(googletest-download NONE)
+
+include(ExternalProject)
+ExternalProject_Add(googletest
+  GIT_REPOSITORY    https://bearssl.org/git/BearSSL
+  GIT_TAG           master
+  SOURCE_DIR        "${CMAKE_CURRENT_BINARY_DIR}/BearSSL-src"
+  BINARY_DIR        "${CMAKE_CURRENT_BINARY_DIR}/BearSSL-build"
+  CONFIGURE_COMMAND ""
+  BUILD_COMMAND     ""
+  INSTALL_COMMAND   ""
+  TEST_COMMAND      ""
+)

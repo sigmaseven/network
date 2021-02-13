@@ -450,7 +450,7 @@ TEST(payload, read_serializable) {
         FAIL() << e->message();
     }
 
-    ASSERT_EQ(m2.a, 0);
+    ASSERT_EQ(m2.a, 4);
     ASSERT_EQ(m2.b, "test");
     network::shutdown();
 }
