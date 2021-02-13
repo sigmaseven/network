@@ -5,6 +5,7 @@
 #ifndef NETWORK_H
 #define NETWORK_H
 
+#include <array>
 #include <bit>
 #include <cerrno>
 #include <cstdio>
@@ -640,6 +641,20 @@ namespace network {
             return std::nullopt;
         }
 
+        template<std::size_t Count>
+        std::optional<network::error> read(std::array<std::uint8_t, Count>& value){
+            if(position + value.size() > data.size()) {
+                return network::error("end of payload");
+            }
+
+            for(int i = 0; i < value.size(); i++) {
+                value[0] = data[position];
+                ++position;
+            }
+
+            return std::nullopt;
+        }
+
         std::optional<network::error> read(serializable& value) {
             if(position + value.size() > data.size()) {
                 return network::error("end of payload");
@@ -702,7 +717,7 @@ namespace network {
             } else {
                 set_descriptor(s);
             }
-            
+
             if(const auto e = ::bind(d, record.info()->ai_addr, record.info()->ai_addrlen); e < 0) {
                 return network::make_error(errno);
             }
