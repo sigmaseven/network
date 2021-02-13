@@ -97,7 +97,7 @@ namespace network {
             std::cerr << msg << std::endl;
         }
 
-        std::string& message() { return msg; }
+        std::string& message() const { return msg; }
     };
 
     [[maybe_unused]] inline error make_error(const int& e) {
