@@ -97,7 +97,7 @@ namespace network {
             std::cerr << msg << std::endl;
         }
 
-        std::string& message() const { return msg; }
+        std::string& message() { return msg; }
     };
 
     [[maybe_unused]] inline error make_error(const int& e) {
@@ -467,6 +467,13 @@ namespace network {
                 return e;
             }
             return std::nullopt;
+        }
+
+        template<std::size_t Count>
+        std::optional<network::error> write(std::array<std::uint8_t, Count>& value) {
+            for(int i = 0; i < Count; ++i) {
+                data.push_back(value[i]);
+            }
         }
 
         std::optional<network::error> write(payload& value) {
