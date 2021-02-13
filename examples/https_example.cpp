@@ -6,7 +6,7 @@
 #include <network.h>
 
 int main() {
-    network::tls_socket client;
+    network::tcp_socket client;
     network::payload request("OPTIONS / HTTP/1.0\r\n\r\n");
     network::payload response;
     network::payload buffer;

@@ -696,18 +696,11 @@ namespace network {
             return std::nullopt;
         }
 
-        [[maybe_unused]] std::optional<network::error> bind() {
-            if(auto e = ::bind(d, i.results()->ai_addr, i.results()->ai_addrlen); e < 0) {
-                return network::make_error(errno);
-            }
-            return std::nullopt;
-        }
-
         [[nodiscard]] std::optional<network::error> bind(const address_record& record) const {
             if(const auto e = ::bind(d, record.info()->ai_addr, record.info()->ai_addrlen); e < 0) {
                 return network::make_error(errno);
             }
-            
+
             return std::nullopt;
         }
 
