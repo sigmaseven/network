@@ -474,6 +474,8 @@ namespace network {
             for(int i = 0; i < Count; ++i) {
                 data.push_back(value[i]);
             }
+
+            return {};
         }
 
         std::optional<network::error> write(payload& value) {
