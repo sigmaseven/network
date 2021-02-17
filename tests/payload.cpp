@@ -486,3 +486,113 @@ TEST(payload, concatenate) {
     ASSERT_EQ(p3.contents()[7], (unsigned char)'p');
     network::shutdown();
 }
+
+TEST(payload, insert16) {
+    network::init();
+
+    auto payload = network::payload();
+
+    if(auto e = payload.write(std::uint16_t(0), network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    if(auto e = payload.insert(std::uint16_t(0x1122), 0, network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    ASSERT_EQ(payload.contents()[0], 0x11);
+    ASSERT_EQ(payload.contents()[1], 0x22);
+
+    payload.reset();
+
+    if(auto e = payload.write(std::uint16_t(0), network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    if(auto e = payload.insert(std::uint16_t(0x1122), 0, network::LITTLE)) {
+        FAIL() << e->message();
+    }
+
+    ASSERT_EQ(payload.contents()[0], 0x22);
+    ASSERT_EQ(payload.contents()[1], 0x11);
+}
+
+TEST(payload, insert32) {
+    network::init();
+
+    auto payload = network::payload();
+    std::uint32_t init = 0x00000000;
+    std::uint32_t value = 0x11223344;
+
+    if(auto e = payload.write(init, network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    if(auto e = payload.insert(value, 0, network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    ASSERT_EQ(payload.contents()[0], 0x11);
+    ASSERT_EQ(payload.contents()[1], 0x22);
+    ASSERT_EQ(payload.contents()[2], 0x33);
+    ASSERT_EQ(payload.contents()[3], 0x44);
+
+    payload.reset();
+
+    if(auto e = payload.write(init, network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    if(auto e = payload.insert(value, 0, network::LITTLE)) {
+        FAIL() << e->message();
+    }
+
+    ASSERT_EQ(payload.contents()[0], 0x44);
+    ASSERT_EQ(payload.contents()[1], 0x33);
+    ASSERT_EQ(payload.contents()[2], 0x22);
+    ASSERT_EQ(payload.contents()[3], 0x11);
+}
+
+TEST(payload, insert64) {
+    network::init();
+
+    auto payload = network::payload();
+    std::uint64_t init =  0x0000000000000000;
+    std::uint64_t value = 0x1122334455667788;
+
+    if(auto e = payload.write(init, network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    if(auto e = payload.insert(value, 0, network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    ASSERT_EQ(payload.contents()[0], 0x11);
+    ASSERT_EQ(payload.contents()[1], 0x22);
+    ASSERT_EQ(payload.contents()[2], 0x33);
+    ASSERT_EQ(payload.contents()[3], 0x44);
+    ASSERT_EQ(payload.contents()[4], 0x55);
+    ASSERT_EQ(payload.contents()[5], 0x66);
+    ASSERT_EQ(payload.contents()[6], 0x77);
+    ASSERT_EQ(payload.contents()[7], 0x88);
+
+    payload.reset();
+
+    if(auto e = payload.write(init, network::BIG)) {
+        FAIL() << e->message();
+    }
+
+    if(auto e = payload.insert(value, 0, network::LITTLE)) {
+        FAIL() << e->message();
+    }
+
+    ASSERT_EQ(payload.contents()[0], 0x88);
+    ASSERT_EQ(payload.contents()[1], 0x77);
+    ASSERT_EQ(payload.contents()[2], 0x66);
+    ASSERT_EQ(payload.contents()[3], 0x55);
+    ASSERT_EQ(payload.contents()[4], 0x44);
+    ASSERT_EQ(payload.contents()[5], 0x33);
+    ASSERT_EQ(payload.contents()[6], 0x22);
+    ASSERT_EQ(payload.contents()[7], 0x11);
+}

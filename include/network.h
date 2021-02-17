@@ -499,6 +499,64 @@ namespace network {
             return std::nullopt;
         }
 
+        template <typename T>
+        std::optional<network::error> insert(T value, const std::size_t pos, const endian e) {
+            if(sizeof(T) + pos > data.size()) {
+                return network::error("type size exceeds payload data size");
+            }
+
+            switch(sizeof(T)) {
+                case 2:
+                    if(e != platform_endianness()) {
+                        data[pos]     = ((value & 0xFF00) >> 8);
+                        data[pos + 1] = ((value & 0x00FF) >> 0);
+                    } else {
+                        data[pos]     = ((value & 0x00FF) >> 0);
+                        data[pos + 1] = ((value & 0xFF00) >> 8);
+                    }
+                    break;
+
+                case 4:
+                    if(e != platform_endianness()) {
+                        data[pos]     = ((value & 0xFF000000) >> 24);
+                        data[pos + 1] = ((value & 0x00FF0000) >> 16);
+                        data[pos + 2] = ((value & 0x0000FF00) >> 8);
+                        data[pos + 3] = ((value & 0x000000FF) >> 0);
+                    } else {
+                        data[pos]     = ((value & 0x000000FF) >> 0);
+                        data[pos + 1] = ((value & 0x0000FF00) >> 8);
+                        data[pos + 2] = ((value & 0x00FF0000) >> 16);
+                        data[pos + 3] = ((value & 0xFF000000) >> 24);
+                    }
+                    break;
+
+                case 8:
+                    if(e != platform_endianness()) {
+                        data[pos]     = ((value & 0xFF00000000000000) >> 56);
+                        data[pos + 1] = ((value & 0x00FF000000000000) >> 48);
+                        data[pos + 2] = ((value & 0x0000FF0000000000) >> 40);
+                        data[pos + 3] = ((value & 0x000000FF00000000) >> 32);
+                        data[pos + 4] = ((value & 0x00000000FF000000) >> 24);
+                        data[pos + 5] = ((value & 0x0000000000FF0000) >> 16);
+                        data[pos + 6] = ((value & 0x000000000000FF00) >> 8);
+                        data[pos + 7] = ((value & 0x00000000000000FF) << 0);
+                    } else {
+                        data[pos]     = ((value & 0x00000000000000FF) >> 0);
+                        data[pos + 1] = ((value & 0x000000000000FF00) >> 8);
+                        data[pos + 2] = ((value & 0x0000000000FF0000) >> 16);
+                        data[pos + 3] = ((value & 0x00000000FF000000) >> 24);
+                        data[pos + 4] = ((value & 0x000000FF00000000) >> 32);
+                        data[pos + 5] = ((value & 0x0000FF0000000000) >> 40);
+                        data[pos + 6] = ((value & 0x00FF000000000000) >> 48);
+                        data[pos + 7] = ((value & 0xFF00000000000000) >> 56);
+                    }
+                    break;
+                default:
+                    return network::error("invalid type width");
+            }
+            return {};
+        }
+
         std::optional<network::error> read(std::uint8_t& value) {
             if(position + 1 > data.size()) {
                 return network::error("end of payload");
