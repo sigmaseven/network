@@ -34,7 +34,6 @@ extern "C" {
 #include <ws2tcpip.h>
 #endif
 
-#include "bearssl.h"
 }
 namespace network {
     class payload;
