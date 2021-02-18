@@ -39,7 +39,7 @@ TEST(payload, write_uint8_t) {
 
     value = 0x11;
 
-    if(auto e = p.write(value)) {
+    if(auto e = p.write(value, network::BIG)) {
         network::shutdown();
         FAIL() << e->message();
     }
@@ -57,7 +57,7 @@ TEST(payload, write_int8_t) {
 
     value = 0xEE;
 
-    if(auto e = p.write(value)) {
+    if(auto e = p.write(value, network::BIG)) {
         network::shutdown();
         FAIL() << e->message();
     }
@@ -311,12 +311,12 @@ TEST(payload, read_uint8_t) {
     std::uint8_t value = 0x11;
     std::uint8_t result;
 
-    if(auto e = p.write(value)) {
+    if(auto e = p.write(value, network::BIG)) {
         network::shutdown();
         FAIL() << e->message();
     }
 
-    if(auto e = p.read(result)) {
+    if(auto e = p.read(result, network::BIG)) {
         network::shutdown();
         FAIL() << e->message();
     }
@@ -491,12 +491,14 @@ TEST(payload, insert16) {
     network::init();
 
     auto payload = network::payload();
+    std::uint16_t init  = 0x0000;
+    std::uint16_t value = 0x1122;
 
-    if(auto e = payload.write(std::uint16_t(0), network::BIG)) {
+    if(auto e = payload.write(init, network::BIG)) {
         FAIL() << e->message();
     }
 
-    if(auto e = payload.insert(std::uint16_t(0x1122), 0, network::BIG)) {
+    if(auto e = payload.insert(value, 0, network::BIG)) {
         FAIL() << e->message();
     }
 
@@ -505,11 +507,11 @@ TEST(payload, insert16) {
 
     payload.reset();
 
-    if(auto e = payload.write(std::uint16_t(0), network::BIG)) {
+    if(auto e = payload.write(init, network::BIG)) {
         FAIL() << e->message();
     }
 
-    if(auto e = payload.insert(std::uint16_t(0x1122), 0, network::LITTLE)) {
+    if(auto e = payload.insert(value, 0, network::LITTLE)) {
         FAIL() << e->message();
     }
 

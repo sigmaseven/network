@@ -340,135 +340,6 @@ namespace network {
             return std::nullopt;
         }
 
-        std::optional<network::error> write(std::vector<std::uint8_t>& input) {
-            for(const auto& c : input) {
-                data.push_back(c);
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::uint8_t& byte) {
-            data.push_back(byte);
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::int8_t& byte) {
-            data.push_back(byte);
-            return std::nullopt;
-        }
-        std::optional<network::error> write(std::uint16_t value, const endian e) {
-            if(platform_endianness() != e) {
-                data.push_back((value & 0xFF00) >> 8);
-                data.push_back((value & 0x00FF) >> 0);
-            } else {
-                data.push_back((value & 0x00FF) >> 0);
-                data.push_back((value & 0xFF00) >> 8);
-            }
-
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::uint16_t& value) {
-            if(auto e = write(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::int16_t& value, const endian endianness) {
-            if(auto e = write((std::uint16_t)value, endianness)) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::int16_t& value) {
-            if(auto e = write(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::uint32_t& value, const endian e) {
-            if(e != platform_endianness()) {
-                data.push_back((value & 0xFF000000) >> 24);
-                data.push_back((value & 0x00FF0000) >> 16);
-                data.push_back((value & 0x0000FF00) >> 8);
-                data.push_back((value & 0x000000FF) >> 0);
-            } else {
-                data.push_back((value & 0x000000FF) >> 0);
-                data.push_back((value & 0x0000FF00) >> 8);
-                data.push_back((value & 0x00FF0000) >> 16);
-                data.push_back((value & 0xFF000000) >> 24);
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::uint32_t& value) {
-            if(auto e = write(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::int32_t& value, const endian endianness) {
-            if(auto e = write((std::uint32_t&)value, endianness)) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::int32_t& value) {
-            if(auto e = write(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::uint64_t& value, const endian e) {
-            if(e != platform_endianness()) {
-                data.push_back((value & 0xFF00000000000000) >> 56);
-                data.push_back((value & 0x00FF000000000000) >> 48);
-                data.push_back((value & 0x0000FF0000000000) >> 40);
-                data.push_back((value & 0x000000FF00000000) >> 32);
-                data.push_back((value & 0x00000000FF000000) >> 24);
-                data.push_back((value & 0x0000000000FF0000) >> 16);
-                data.push_back((value & 0x000000000000FF00) >> 8);
-                data.push_back((value & 0x00000000000000FF) << 0);
-            } else {
-                data.push_back((value & 0x00000000000000FF) >> 0);
-                data.push_back((value & 0x000000000000FF00) >> 8);
-                data.push_back((value & 0x0000000000FF0000) >> 16);
-                data.push_back((value & 0x00000000FF000000) >> 24);
-                data.push_back((value & 0x000000FF00000000) >> 32);
-                data.push_back((value & 0x0000FF0000000000) >> 40);
-                data.push_back((value & 0x00FF000000000000) >> 48);
-                data.push_back((value & 0xFF00000000000000) >> 56);
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::uint64_t& value) {
-            if(auto e = write((std::uint64_t&)value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::int64_t& value, const endian endianness) {
-            if(auto e = write((std::uint64_t)value, endianness)) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> write(std::int64_t& value) {
-            if(auto e = write(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
         template<std::size_t Count>
         std::optional<network::error> write(std::array<std::uint8_t, Count>& value) {
             for(int i = 0; i < Count; ++i) {
@@ -478,11 +349,20 @@ namespace network {
             return {};
         }
 
+        std::optional<network::error> write(std::vector<std::uint8_t>& value) {
+            for(const auto& v : value) {
+                data.push_back(v);
+            }
+
+            return {};
+        }
+
         std::optional<network::error> write(payload& value) {
             for(const auto& c : value.contents()) {
                 data.push_back(c);
             }
-            return std::nullopt;
+
+            return {};
         }
 
         std::optional<network::error> write(serializable& value) {
@@ -500,12 +380,73 @@ namespace network {
         }
 
         template <typename T>
+        std::optional<network::error> write(const T& value, endian e) {
+            switch(sizeof(T)) {
+                case 1:
+                    data.push_back(value);
+                    break;
+
+                case 2:
+                    if(platform_endianness() != e) {
+                        data.push_back((value & 0xFF00) >> 8);
+                        data.push_back((value & 0x00FF) >> 0);
+                    } else {
+                        data.push_back((value & 0x00FF) >> 0);
+                        data.push_back((value & 0xFF00) >> 8);
+                    }
+                    break;
+
+                case 4:
+                    if(e != platform_endianness()) {
+                        data.push_back((value & 0xFF000000) >> 24);
+                        data.push_back((value & 0x00FF0000) >> 16);
+                        data.push_back((value & 0x0000FF00) >> 8);
+                        data.push_back((value & 0x000000FF) >> 0);
+                    } else {
+                        data.push_back((value & 0x000000FF) >> 0);
+                        data.push_back((value & 0x0000FF00) >> 8);
+                        data.push_back((value & 0x00FF0000) >> 16);
+                        data.push_back((value & 0xFF000000) >> 24);
+                    }
+                    break;
+
+                case 8:
+                    if(e != platform_endianness()) {
+                        data.push_back((value & 0xFF00000000000000) >> 56);
+                        data.push_back((value & 0x00FF000000000000) >> 48);
+                        data.push_back((value & 0x0000FF0000000000) >> 40);
+                        data.push_back((value & 0x000000FF00000000) >> 32);
+                        data.push_back((value & 0x00000000FF000000) >> 24);
+                        data.push_back((value & 0x0000000000FF0000) >> 16);
+                        data.push_back((value & 0x000000000000FF00) >> 8);
+                        data.push_back((value & 0x00000000000000FF) << 0);
+                    } else {
+                        data.push_back((value & 0x00000000000000FF) >> 0);
+                        data.push_back((value & 0x000000000000FF00) >> 8);
+                        data.push_back((value & 0x0000000000FF0000) >> 16);
+                        data.push_back((value & 0x00000000FF000000) >> 24);
+                        data.push_back((value & 0x000000FF00000000) >> 32);
+                        data.push_back((value & 0x0000FF0000000000) >> 40);
+                        data.push_back((value & 0x00FF000000000000) >> 48);
+                        data.push_back((value & 0xFF00000000000000) >> 56);
+                    }
+                    break;
+            }
+
+            return {};
+        }
+
+        template <typename T>
         std::optional<network::error> insert(T value, const std::size_t pos, const endian e) {
             if(sizeof(T) + pos > data.size()) {
                 return network::error("type size exceeds payload data size");
             }
 
             switch(sizeof(T)) {
+                case 1:
+                    data[pos] = value;
+                    break;
+
                 case 2:
                     if(e != platform_endianness()) {
                         data[pos]     = ((value & 0xFF00) >> 8);
@@ -557,136 +498,69 @@ namespace network {
             return {};
         }
 
-        std::optional<network::error> read(std::uint8_t& value) {
-            if(position + 1 > data.size()) {
-                return network::error("end of payload");
+        template <typename T>
+        std::optional<network::error> read(T& value, endian e) {
+            if(position + sizeof(T) > data.size()) {
+                return network::error("type width exceeds remaining payload size");
             }
 
-            value = data[position];
-            position++;
+            switch(sizeof(T)) {
+                case 1:
+                    value = data[position];
+                    position++;
+                    break;
 
-            return std::nullopt;
-        }
+                case 2:
+                    if(platform_endianness() != e) {
+                        value = data[position + 1] << 0 |
+                                data[position]     << 8;
+                    } else {
+                        value = data[position]   << 0 |
+                                data[position+1] << 8;
+                    }
+                    position += 2;
+                    break;
 
-        std::optional<network::error> read(std::int8_t& value) {
-            if(auto e = read((std::uint8_t&)value)) {
-                return e;
-            }
-            return std::nullopt;
-        }
+                case 4:
+                    if(platform_endianness() != e) {
+                        value = data[position + 3] << 0  |
+                                data[position + 2] << 8  |
+                                data[position + 1] << 16 |
+                                data[position] << 24;
+                    } else {
+                        value = data[position]   << 0  |
+                                data[position+1] << 8  |
+                                data[position+2] << 16 |
+                                data[position+3] << 24;
+                    }
+                    position += 4;
+                    break;
 
-        std::optional<network::error> read(std::uint16_t& value, const endian endianness) {
-            if(position + 2 > data.size()) {
-                return network::error("end of payload");
-            }
-
-            value = 0;
-
-            if(platform_endianness() != endianness) {
-                value = data[position + 1] << 0 |
-                        data[position]     << 8;
-            } else {
-                    value = data[position]   << 0 |
-                            data[position+1] << 8;
-            }
-
-            position += 2;
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::int16_t& value, const endian endianness) {
-            if(auto e = read((std::uint16_t&)value, endianness)) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::uint16_t& value) {
-            if(auto e = read(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::uint32_t& value, const endian endianness) {
-            if(position + 4  > data.size()) {
-                return network::error("end of payload");
-            }
-
-            value = 0;
-
-            if(platform_endianness() != endianness) {
-                value = data[position + 3] << 0  |
-                        data[position + 2] << 8  |
-                        data[position + 1] << 16 |
-                        data[position] << 24;
-            } else {
-                value = data[position]   << 0  |
-                        data[position+1] << 8  |
-                        data[position+2] << 16 |
-                        data[position+3] << 24;
+                case 8:
+                    if(platform_endianness() != e) {
+                        value = (std::uint64_t)data[position+7] << 0  |
+                                (std::uint64_t)data[position+6] << 8  |
+                                (std::uint64_t)data[position+5] << 16 |
+                                (std::uint64_t)data[position+4] << 24 |
+                                (std::uint64_t)data[position+3] << 32 |
+                                (std::uint64_t)data[position+2] << 40 |
+                                (std::uint64_t)data[position+1] << 48 |
+                                (std::uint64_t)data[position]   << 56;
+                    } else {
+                        value = (std::uint64_t)data[position]   << 0  |
+                                (std::uint64_t)data[position+1] << 8  |
+                                (std::uint64_t)data[position+2] << 16 |
+                                (std::uint64_t)data[position+3] << 24 |
+                                (std::uint64_t)data[position+4] << 32 |
+                                (std::uint64_t)data[position+5] << 40 |
+                                (std::uint64_t)data[position+6] << 48 |
+                                (std::uint64_t)data[position+7] << 56;
+                    }
+                    position += 8;
+                    break;
             }
 
-            position += 4;
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::int32_t& value, const endian endianness) {
-            if(auto e = read((std::uint32_t&)value, endianness)) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::uint32_t& value) {
-            if(auto e = read(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::uint64_t& value, const endian endianness) {
-            if(position + 8  > data.size()) {
-                return network::error("end of payload");
-            }
-
-            value = (unsigned long)0;
-
-            if(platform_endianness() != endianness) {
-                value = (std::uint64_t)data[position+7] << 0  |
-                        (std::uint64_t)data[position+6] << 8  |
-                        (std::uint64_t)data[position+5] << 16 |
-                        (std::uint64_t)data[position+4] << 24 |
-                        (std::uint64_t)data[position+3] << 32 |
-                        (std::uint64_t)data[position+2] << 40 |
-                        (std::uint64_t)data[position+1] << 48 |
-                        (std::uint64_t)data[position]   << 56;
-            } else {
-                value = (std::uint64_t)data[position]   << 0  |
-                        (std::uint64_t)data[position+1] << 8  |
-                        (std::uint64_t)data[position+2] << 16 |
-                        (std::uint64_t)data[position+3] << 24 |
-                        (std::uint64_t)data[position+4] << 32 |
-                        (std::uint64_t)data[position+5] << 40 |
-                        (std::uint64_t)data[position+6] << 48 |
-                        (std::uint64_t)data[position+7] << 56;
-            }
-
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::int64_t& value, const endian endianness) {
-            if(auto e = read((std::uint64_t&)value, endianness)) {
-                return e;
-            }
-            return std::nullopt;
-        }
-
-        std::optional<network::error> read(std::uint64_t& value) {
-            if(auto e = read(value, platform_endianness())) {
-                return e;
-            }
-            return std::nullopt;
+            return {};
         }
 
         std::optional<network::error> read(std::string& value, std::size_t count) {
