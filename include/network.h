@@ -24,9 +24,6 @@ extern "C" {
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include <openssl/bio.h>
-#include <openssl/err.h>
-#include <openssl/ssl.h>
 #endif // LINUX
 #ifdef WINDOWS
 #include <winsock2.h>
