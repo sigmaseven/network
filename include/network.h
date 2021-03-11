@@ -668,6 +668,17 @@ namespace network {
             }
             return std::nullopt;
         }
+
+        std::optional<network::error> accept(int &fd) {
+            struct sockaddr_storage addr;
+            int size = sizeof(addr);
+
+            if(fd = ::accept(descriptor(), (struct sockaddr *)&addr, &size); fd < 0) {
+                return network::make_error(errno);
+            }
+
+            return std::nullopt;
+        }
     };
 
     class [[maybe_unused]] tcp_socket : public generic_socket {
